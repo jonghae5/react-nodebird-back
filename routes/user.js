@@ -3,15 +3,39 @@ const { User, Post } = require('../models');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const passport = require('passport');
+const { isLoggedIn, isNotLoggedIn } = require('./middlewares');
 
-router.post('/logout', (req, res) => {
-  req.logout();
-  req.session.destroy();
-  res.send('ok');
+//GET /user
+
+router.get('/', async (req, res, next) => {
+  try {
+    if (req.user) {
+      // const user = await User.findOne({ where: { id: req.user.id } });
+      const fullUserWithoutPassword = await User.findOne({
+        where: { id: req.user.id },
+        attributes: { exclude: ['password'] },
+        // 숫자만 셀거기 때문에 아이디만 들고온다.
+        include: [
+          {
+            model: Post,
+            attributes: ['id'],
+          },
+          { model: User, as: 'Followings', attributes: ['id'] },
+          { model: User, as: 'Followers', attributes: ['id'] },
+        ],
+      });
+      res.status(200).json(fullUserWithoutPassword);
+    } else {
+      res.status(200).json(null);
+    }
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
 });
 
 //POST /user/login
-router.post('/login', (req, res, next) => {
+router.post('/login', isNotLoggedIn, (req, res, next) => {
   passport.authenticate('local', (err, user, info) => {
     if (err) {
       console.error(err);
@@ -28,13 +52,14 @@ router.post('/login', (req, res, next) => {
       // res.setHeader('Cookie','cxlhy1')
       const fullUserWithoutPassword = await User.findOne({
         where: { id: user.id },
-        attribute: { exclude: ['password'] },
+        attributes: { exclude: ['password'] },
         include: [
           {
             model: Post,
+            attributes: ['id'],
           },
-          { model: User, as: 'Followings' },
-          { model: User, as: 'Followers' },
+          { model: User, as: 'Followings', attributes: ['id'] },
+          { model: User, as: 'Followers', attributes: ['id'] },
         ],
       });
       return res.status(200).json(fullUserWithoutPassword); // Front로 사용자 정보를 내려준다.
@@ -42,7 +67,7 @@ router.post('/login', (req, res, next) => {
   })(req, res, next);
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', isNotLoggedIn, async (req, res, next) => {
   const hashedPassword = await bcrypt.hash(req.body.password, 12);
   //POST /user/
   try {
@@ -64,6 +89,12 @@ router.post('/', async (req, res, next) => {
     console.error(error);
     next(error); // status 5XX
   }
+});
+
+router.post('/logout', isLoggedIn, (req, res) => {
+  req.logout();
+  req.session.destroy();
+  res.send('ok');
 });
 
 module.exports = router;

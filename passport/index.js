@@ -1,6 +1,7 @@
 const passport = require('passport');
 const local = require('./local');
 const { User } = require('../models');
+
 module.exports = () => {
   passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -11,10 +12,10 @@ module.exports = () => {
         where: id,
       });
 
-      done(null, user);
-    } catch (err) {
+      done(null, user); // req.user
+    } catch (xc) {
       console.error(err);
-      done(error);
+      done(err);
     }
   });
 
