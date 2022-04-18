@@ -21,7 +21,7 @@ const cookieParser = require('cookie-parser');
 const passport = require('passport');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
-
+const path = require('path');
 dotenv.config();
 passportConfig();
 
@@ -41,6 +41,7 @@ app.use(
   })
 );
 
+app.use('/', express.static(path.join(__dirname, 'uploads')));
 app.use(morgan('dev'));
 app.use(
   cors({
