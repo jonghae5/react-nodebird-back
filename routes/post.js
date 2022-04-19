@@ -1,6 +1,6 @@
+const { Post, Comment, Image, User, Hashtag, Retweet } = require('../models');
 const express = require('express');
 const router = express.Router();
-const { Post, Comment, Image, User } = require('../models');
 const post = require('../models/post');
 const { isLoggedIn } = require('./middlewares');
 const multer = require('multer');
@@ -29,6 +29,7 @@ const upload = multer({
   }),
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
 });
+
 // POST /post/images
 router.post(
   '/images',
@@ -78,13 +79,25 @@ router.delete('/:postId/like', isLoggedIn, async (req, res, next) => {
     next(err);
   }
 });
+
 router.post('/', isLoggedIn, upload.none(), async (req, res, next) => {
   // POST /post
   try {
+    const hashtags = req.body.content.match(/#[^\s#]+/g);
     const post = await Post.create({
       content: req.body.content,
       UserId: req.user.id,
     });
+    if (hashtags) {
+      // # 제거 후, 소문자로 변경 후, DB 저장
+      const result = await Promise.all(
+        hashtags.map(tag =>
+          Hashtag.findOrCreate({ where: { name: tag.slice(1).toLowerCase() } })
+        )
+      );
+      // [[#노드, true], [#리액트,false]] 생성됐는지 안됐는지 true, false로 반환하기 땨문에
+      await post.addHashtags(result.map(v => v[0]));
+    }
     if (req.body.image) {
       if (Array.isArray(req.body.image)) {
         // 이미지가 여러개인 경우
@@ -174,6 +187,84 @@ router.delete('/:postId', isLoggedIn, async (req, res, next) => {
   } catch (err) {
     console.error(err);
     next(err);
+  }
+});
+
+// POST /post/1/retweet
+router.post('/:postId/retweet', isLoggedIn, async (req, res, next) => {
+  try {
+    const post = await Post.findOne({
+      where: { id: req.params.postId },
+      include: [
+        {
+          model: Post,
+          as: 'Retweet',
+        },
+      ],
+    });
+    if (!post) {
+      return res.status(403).send('존재하지 않는 게시글입니다.');
+    }
+    // 본인 게시글 리트윗, 남 게시글 리트윗한 것을 리트윗 <금지>
+    if (
+      req.user.id === post.UserId ||
+      (post, Retweet && post.Retweet.UserId === req.user.Id)
+    ) {
+      return res.status(403).send('자신의 글은 리트윗할 수 없습니다.');
+    }
+    // 리트윗한 남 게시글 혹은 리트윗안한 순정 게시글
+    const retweetTargetId = post.RetweetId || post.id;
+
+    // 이미 리트윗한 게시글이 있다면 <금지>
+    const exPost = await Post.findOne({
+      where: {
+        UserId: req.user.id,
+        RetweetId: retweetTargetId,
+      },
+    });
+    if (exPost) {
+      return res.status(403).send('이미 리트윗한 게시글입니다.');
+    }
+    const retweet = await Post.create({
+      UserId: req.user.id,
+      RetweetId: retweetTargetId,
+      content: 'retweet', // allowNull:false 라서 문자열 삽입
+    });
+
+    const retweetWithPrevPost = await Post.findOne({
+      where: { id: retweet.id },
+      include: [
+        {
+          model: Post,
+          as: 'Retweet',
+        },
+        {
+          model: User,
+          attributes: ['id', 'nickname'],
+        },
+        {
+          model: Image,
+        },
+        {
+          model: Comment,
+          include: [
+            {
+              model: User,
+              attributes: ['id', 'nickname'],
+            },
+          ],
+        },
+        {
+          model: User,
+          as: 'Likers',
+          attributes: ['id'],
+        },
+      ],
+    });
+    res.status(201).json(retweetWithPrevPost);
+  } catch (error) {
+    console.error(error);
+    next(error);
   }
 });
 
