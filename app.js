@@ -12,6 +12,7 @@ const express = require('express');
 const postRouter = require('./routes/post');
 const postsRouter = require('./routes/posts');
 const userRouter = require('./routes/user');
+const hashtagRouter = require('./routes/hashtag');
 const cors = require('cors');
 const db = require('./models');
 const app = express();
@@ -73,7 +74,7 @@ app.get('/api', (req, res) => {
 app.use('/posts', postsRouter);
 app.use('/post', postRouter);
 app.use('/user', userRouter);
-
+app.use('/hashtag', hashtagRouter);
 // app.use((err,req,res,next) => {}); 에러 처리 미들웨어
 app.listen(3065, () => {
   console.log('서버 실행 중');
