@@ -23,6 +23,8 @@ const passport = require('passport');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
 const path = require('path');
+const helmet = require('helmet');
+const hpp = require('hpp');
 dotenv.config();
 passportConfig();
 
@@ -43,7 +45,16 @@ app.use(
 );
 
 app.use('/', express.static(path.join(__dirname, 'uploads')));
-app.use(morgan('dev'));
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(morgan('combined')); //접속자 IP 등 다양한 log
+
+  // 보안 패키지
+  app.use(hpp());
+  app.use(helmet());
+} else {
+  app.use(morgan('dev'));
+}
 app.use(
   cors({
     origin: true,
@@ -76,6 +87,6 @@ app.use('/post', postRouter);
 app.use('/user', userRouter);
 app.use('/hashtag', hashtagRouter);
 // app.use((err,req,res,next) => {}); 에러 처리 미들웨어
-app.listen(3065, () => {
+app.listen(80, () => {
   console.log('서버 실행 중');
 });
