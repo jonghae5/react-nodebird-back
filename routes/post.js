@@ -78,7 +78,7 @@ AWS.config.update({
   region: 'ap-northeast-2',
 });
 const upload = multer({
-  storgae: multerS3({
+  storage: multerS3({
     s3: new AWS.S3(),
     bucket: 'react-nodebird-jonghae5',
     key(req, file, cb) {
