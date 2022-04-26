@@ -82,7 +82,7 @@ const upload = multer({
     s3: new AWS.S3(),
     bucket: 'react-nodebird-jonghae5',
     key(req, file, cb) {
-      cb(null, `original/${Date.noew()}+${path.basename(file.originalname)}`);
+      cb(null, `original/${Date.now()}+${path.basename(file.originalname)}`);
     },
   }),
   // storage: multer.diskStorage({
