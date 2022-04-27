@@ -45,8 +45,9 @@ app.use(
 );
 
 app.use('/', express.static(path.join(__dirname, 'uploads')));
-app.set('trust proxy', 1);
+// app.set('trust proxy', 1);
 if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
   app.use(morgan('combined')); //접속자 IP 등 다양한 log
 
   // 보안 패키지
