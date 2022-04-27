@@ -38,14 +38,14 @@ db.sequelize
   });
 app.use(
   cors({
-    // origin: 'http://localhost:3060',
+    // origin: 'https://localhost:3060',
     origin: true,
     credentials: true,
   })
 );
 
 app.use('/', express.static(path.join(__dirname, 'uploads')));
-
+app.set('trust proxy', 1);
 if (process.env.NODE_ENV === 'production') {
   app.use(morgan('combined')); //접속자 IP 등 다양한 log
 
@@ -66,12 +66,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(
   session({
+    proxy: true,
     saveUninitialized: false,
     resave: false,
     secret: process.env.COOKIE_SECRET,
     cookie: {
       httpOnly: true,
-      secure: false,
+      // secure: false,
+      secure: true,
       domain: process.env.NODE_ENV === 'production' && '.jonghae5.shop',
     },
   })
@@ -92,6 +94,6 @@ app.use('/post', postRouter);
 app.use('/user', userRouter);
 app.use('/hashtag', hashtagRouter);
 // app.use((err,req,res,next) => {}); 에러 처리 미들웨어
-app.listen(80, () => {
+app.listen(3065, () => {
   console.log('서버 실행 중');
 });
