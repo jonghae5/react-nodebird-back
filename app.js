@@ -1,13 +1,3 @@
-// const http = require('http');
-// const server = http.createServer((req, res) => {
-//   console.log(req.url, req.method);
-//   res.end('hello world');
-// });
-
-// server.listen(3065, () => {
-//   console.log('서버 실행 중');
-// });
-
 const express = require('express');
 const postRouter = require('./routes/post');
 const postsRouter = require('./routes/posts');
@@ -15,7 +5,7 @@ const userRouter = require('./routes/user');
 const hashtagRouter = require('./routes/hashtag');
 const cors = require('cors');
 const db = require('./models');
-const app = express();
+
 const passportConfig = require('./passport');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
@@ -25,9 +15,9 @@ const morgan = require('morgan');
 const path = require('path');
 const helmet = require('helmet');
 const hpp = require('hpp');
-dotenv.config();
-passportConfig();
 
+dotenv.config();
+const app = express();
 db.sequelize
   .sync()
   .then(() => {
@@ -36,32 +26,32 @@ db.sequelize
   .catch(err => {
     console.error(err);
   });
-app.use(
-  cors({
-    // origin: 'https://localhost:3060',
-    origin: true,
-    credentials: true,
-  })
-);
 
-app.use('/', express.static(path.join(__dirname, 'uploads')));
-// app.set('trust proxy', 1);
+passportConfig();
+
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
   app.use(morgan('combined')); //접속자 IP 등 다양한 log
-
   // 보안 패키지
   app.use(hpp());
-  app.use(helmet());
+  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(
+    cors({
+      origin: 'http://jonghae5.shop',
+      credentials: true,
+    })
+  );
 } else {
   app.use(morgan('dev'));
+  app.use(
+    cors({
+      origin: true,
+      credentials: true,
+    })
+  );
 }
-app.use(
-  cors({
-    origin: true,
-    credentials: true,
-  })
-);
+
+app.use('/', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
@@ -73,8 +63,8 @@ app.use(
     secret: process.env.COOKIE_SECRET,
     cookie: {
       httpOnly: true,
-      // secure: false,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production', // 개발용이면 false
+      // secure: false, // Production
       domain: process.env.NODE_ENV === 'production' && '.jonghae5.shop',
     },
   })
